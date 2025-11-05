@@ -1,7 +1,7 @@
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[command(name = "hello")]
+#[command(name = "hello [OPTIONS] [NAME]")]
 
 struct Args {
     
