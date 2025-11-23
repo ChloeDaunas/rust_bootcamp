@@ -6,22 +6,27 @@ use std::collections::HashMap;
 use std::io::Read;
 
 #[derive(Parser, Debug)]
-#[command(name = "wordfreq [OPTIONS]")]
+#[command(
+    name = "wordfreq",
+    about = "Count word frequency in text"
+)]
 
 struct Args {
-    #[arg()]
+    #[arg(), help="Text to analyze (or use stdin)"]
     text: Option<String>,
 
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 10, help="Show top N words")]
     top:u8,
 
-    #[arg(long, default_value_t = 1)]
-    min: u8,
+    #[arg(long, default_value_t = 1, help="Ignore words shorter than N")]
+    min-length: u8,
 
-    #[arg(long)]
+    #[arg(long, help="Case insensitive counting")]
     ignore_case:bool
 
 }
+
+
 
 fn main(){
     let args = Args::parse();
@@ -53,7 +58,7 @@ fn main(){
         let mot = mot.trim_matches(|c: char| !c.is_alphanumeric()).to_string(); //trim enlève des trucs au debut et a 
         // la fin "match" pour enlever un carac particulier "|c: char|" regarde chaque si chaque char individuelement 
         // n'est pas une lettre ou un chiffre
-        if mot.is_empty() || mot.len()<args.min as usize{
+        if mot.is_empty() || mot.len()<args.min_length as usize{
             continue; // ignore les chaînes vides ou trop petites
         }
         
