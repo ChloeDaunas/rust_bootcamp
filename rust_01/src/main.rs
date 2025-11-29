@@ -7,7 +7,6 @@ use std::path::Path;
 
 #[derive(Parser, Debug)]
 #[command(name = "wordfreq", about = "Count word frequency in text")]
-
 struct Args {
     #[arg(help = "Text to analyze (or use stdin)")]
     text: Option<String>,
