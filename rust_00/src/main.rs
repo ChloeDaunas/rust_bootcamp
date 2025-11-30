@@ -14,7 +14,13 @@ struct Args {
 }
 
 fn main() {
-    let args = Args::parse();
+    let args = match Args::try_parse() {
+        Ok(a) => a,
+        Err(_) => {
+            println!("error");
+            std::process::exit(2);
+        }
+    };
 
     let greeting = if args.upper {
         format!("HELLO, {}!", args.name.to_uppercase())

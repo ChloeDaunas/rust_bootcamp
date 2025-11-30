@@ -22,7 +22,14 @@ struct Args {
 }
 
 fn main() {
-    let args = Args::parse();
+    let args = match Args::try_parse() {
+        Ok(a) => a,
+        Err(_) => {
+            println!("error");
+            std::process::exit(2);
+        }
+    };
+
     let mut t = String::new();
 
     if let Some(text_arg) = args.text {
@@ -62,9 +69,8 @@ fn main() {
     frequence.sort_by(|a, b| b.1.cmp(a.1));
 
     let mut i = 0;
-    println!("Word frequency");
     for (mot, count) in frequence.iter() {
-        println!("{} : {}", mot, count); //affichage
+        println!("{}: {}", mot, count); //affichage
         i += 1;
         if i == args.top {
             break;

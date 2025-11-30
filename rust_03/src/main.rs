@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 mod dh;
 use dh::{G, P};
+use std::fs::File;
 use std::io;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -24,7 +25,8 @@ pub enum Commands {
     Client { address: String },
 }
 
-fn generate_keystream(seed: u32, length: usize) -> Vec<u8> {
+fn generate_keystream(seed: u32) -> Vec<u8> {
+    let length = 1024;
     let mut x = seed;
     let mut out = Vec::with_capacity(length);
 
@@ -32,6 +34,11 @@ fn generate_keystream(seed: u32, length: usize) -> Vec<u8> {
         x = x.wrapping_mul(1103515245).wrapping_add(12345);
         out.push((x >> 16) as u8);
     }
+
+    let n = out.len().min(14); //pour pas que ça depasse si moins de 14 byte
+    println!("Keystream: {:02X?} ...\n", &out[..n]);
+    println!("Secure channel established!\n");
+
     out
 }
 
@@ -55,7 +62,10 @@ fn create_public_key(base: u64, exponent: u64, modulo: u64) -> u64 {
     result
 }
 
-fn encrypter(seed: u32) -> Vec<u8> {
+fn encrypter(seed: u32) -> std::io::Result<Vec<u8>> {
+    // On génère tout le keystream d’un coup
+    let keystream = generate_keystream(seed);
+
     //prendre le message
     println!("\n[CHAT] Type message:");
     io::stdout().flush().unwrap(); // Force l'affichage avant la saisie 
@@ -65,11 +75,6 @@ fn encrypter(seed: u32) -> Vec<u8> {
         .expect("Erreur lors de la lecture");
     let message = input.trim();
     let message_bytes = message.as_bytes();
-
-    // On génère tout le keystream d’un coup
-    let keystream = generate_keystream(seed, message_bytes.len());
-
-    let _first_key = keystream[0]; // premier octet utilisé
 
     let mut _ciphertext: std::vec::Vec<u8> = Vec::with_capacity(message.len());
 
@@ -81,12 +86,15 @@ fn encrypter(seed: u32) -> Vec<u8> {
     println!("Plain: {:02X?} (\"{}\")", message.as_bytes(), message);
     println!("Cipher: {:02X?}\n", _ciphertext);
 
-    _ciphertext
+    let mut file = File::create("plain.txt")?; //on garde une trace du message d'origne
+    file.write_all(message.as_bytes())?;
+
+    Ok(_ciphertext)
 }
 
 fn decrypter(seed: u32, message: &[u8]) -> Vec<u8> {
     // Génération du même keystream
-    let keystream = generate_keystream(seed, message.len());
+    let keystream = generate_keystream(seed);
 
     let _first_key = keystream[0];
 
@@ -101,7 +109,7 @@ fn decrypter(seed: u32, message: &[u8]) -> Vec<u8> {
         plain,
         String::from_utf8_lossy(&plain)
     );
-    println!("\n[SERVEUR] {}\n", String::from_utf8_lossy(&plain));
+
     plain
 }
 
@@ -134,6 +142,33 @@ fn recevoir(stream: &mut TcpStream) -> std::io::Result<Vec<u8>> {
     stream.read_exact(&mut buffer)?;
 
     Ok(buffer)
+}
+
+fn verifier_secret(stream: &mut TcpStream, shared: u64) -> std::io::Result<()> {
+    let mut buf = [0u8; 8];
+    stream.read_exact(&mut buf)?;
+    let server_shared = u64::from_be_bytes(buf);
+    if server_shared == shared {
+        println!("[VERIFY] Both sides computed the same secret\n");
+    } else {
+        println!("[VERIFY] not the same secret\n");
+    }
+
+    Ok(())
+}
+
+fn verifier_cryptage(plain: &[u8]) -> std::io::Result<()> {
+    let mut file = File::open("plain.txt")?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    println!(
+        "[TEST] Round-trip verified: \"{}\"-> encrypt -> decrypt -> \"{}\"",
+        contents.trim(),
+        String::from_utf8_lossy(plain)
+    );
+
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -200,6 +235,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 other_public, private, shared
             );
 
+            stream.write_all(&shared.to_be_bytes())?; //envoie
+            let _ = verifier_secret(&mut stream, shared); //reçoit
+
             //println!("[VERIFY] Both sides computed the same secret ✓");
 
             println!("[STREAM] Generating keystream from secret...");
@@ -208,10 +246,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             //println!("Keystream: {:02X?}", keystream);
 
             //crypter le message
-            let messagecrypte = encrypter(graine_lgc);
+            let messagecrypte = encrypter(graine_lgc)?;
 
             //envoyer message
-            let _ = envoyer(&mut stream, &messagecrypte);
+            envoyer(&mut stream, &messagecrypte)?;
 
             //recevoir message
             let message_recu = recevoir(&mut stream)?;
@@ -219,10 +257,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             //decripter
             let messagedecryte = decrypter(graine_lgc, &message_recu);
 
-            println!(
-                "[TEST] Round-trip verified: \"{:?}\" encrypt → decrypt \"{:?}\"\n",
-                message_recu, messagedecryte
-            );
+            let _ = verifier_cryptage(&messagedecryte);
+
             println!("[CLIENT] {}", String::from_utf8_lossy(&messagedecryte));
         }
 
@@ -290,11 +326,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             //println!("[VERIFY] Both sides computed the same secret \n");
 
+            let _ = verifier_secret(&mut stream, shared); //reçoit
+            stream.write_all(&shared.to_be_bytes())?; //envoie
+
             println!("[STREAM] Generating keystream from secret...");
             println!("Algorithm: LCG (a=1103515245, c=12345, m=2^32)");
             println!("Seed: secret = {:016X}\n", shared);
 
-            println!("Secure channel established!\n");
+            let _ = generate_keystream(graine_lgc);
 
             //recevoir message
             let message_recu = recevoir(&mut stream)?;
@@ -308,12 +347,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("[DECRYPT]");
             println!("Cipher: {:02X?}", message_recu);
 
+            let messagedecryte = decrypter(graine_lgc, &message_recu);
+
+            let _ = verifier_cryptage(&messagedecryte); //reçoit
+            println!("\n[SERVEUR] {}\n", String::from_utf8_lossy(&messagedecryte));
+
             //println!("\n[TEST] Round-trip verified: \"{}\" -> encrypt -> decrypt -> \"{}\"",)
             //crypter le message
-            let messagecrypte = encrypter(graine_lgc);
+            let messagecrypte = encrypter(graine_lgc)?;
 
             //envoyer message
-            let _ = envoyer(&mut stream, &messagecrypte);
+            envoyer(&mut stream, &messagecrypte)?;
         }
     }
 
