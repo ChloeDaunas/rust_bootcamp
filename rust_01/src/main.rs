@@ -70,7 +70,7 @@ fn main() {
 
     let mut i = 0;
     for (mot, count) in frequence.iter() {
-        println!("{}: {}", mot, count); //affichage
+        print!("{}: {}  ", mot, count); //affichage
         i += 1;
         if i == args.top {
             break;
