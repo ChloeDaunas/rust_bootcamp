@@ -6,10 +6,15 @@ struct Args {
     #[arg(default_value = "World", help = "Name to greet")]
     name: String,
 
-    #[arg(long, help = "Convert to uppercase")]
+    #[arg(short = 'u', long, help = "Convert to uppercase")]
     upper: bool,
 
-    #[arg(long, default_value_t = 1, help = "Repeat greeting N times")]
+    #[arg(
+        short = 'r',
+        long,
+        default_value_t = 1,
+        help = "Repeat greeting N times"
+    )]
     repeat: u8,
 }
 
@@ -22,11 +27,15 @@ fn main() {
         }
     };
 
-    let greeting = if args.upper {
-        format!("HELLO, {}!", args.name.to_uppercase())
+    let mut greeting = if args.repeat > 1 {
+        args.name.to_string()
     } else {
         format!("Hello, {}!", args.name)
     };
+
+    if args.upper {
+        greeting = greeting.to_uppercase();
+    }
 
     for _ in 0..args.repeat {
         println!("{}", greeting);

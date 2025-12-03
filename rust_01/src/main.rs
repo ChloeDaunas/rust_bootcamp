@@ -11,24 +11,23 @@ struct Args {
     #[arg(help = "Text to analyze (or use stdin)")]
     text: Option<String>,
 
-    #[arg(long, default_value_t = 10, help = "Show top N words")]
-    top: u8,
+    #[arg(short = 'n', long, default_value_t = 10, help = "Show top N words")]
+    top: usize,
 
-    #[arg(long, default_value_t = 1, help = "Ignore words shorter than N")]
-    min_length: u8,
+    #[arg(
+        short = 'm',
+        long,
+        default_value_t = 1,
+        help = "Ignore words shorter than N"
+    )]
+    min_length: usize,
 
     #[arg(long, help = "Case insensitive counting")]
     ignore_case: bool,
 }
 
 fn main() {
-    let args = match Args::try_parse() {
-        Ok(a) => a,
-        Err(_) => {
-            println!("error");
-            std::process::exit(2);
-        }
-    };
+    let args = Args::parse();
 
     let mut t = String::new();
 
@@ -42,7 +41,7 @@ fn main() {
     } else {
         io::stdin()
             .read_to_string(&mut t)
-            .expect("Erreur de lecture");
+            .expect("Erreur lors de la lecture depuis stdin");
     };
 
     if args.ignore_case {
@@ -55,7 +54,7 @@ fn main() {
         let mot = mot.trim_matches(|c: char| !c.is_alphanumeric()).to_string(); //trim enlève des trucs au debut et a 
         // la fin "match" pour enlever un carac particulier "|c: char|" regarde chaque si chaque char individuelement
         // n'est pas une lettre ou un chiffre
-        if mot.is_empty() || mot.len() < args.min_length as usize {
+        if mot.is_empty() || mot.len() < args.min_length {
             continue; // ignore les chaînes vides ou trop petites
         }
 
@@ -64,16 +63,10 @@ fn main() {
     }
 
     //on convertie la map pour pouvoir la trier
-    let mut frequence: Vec<(_, _)> = compteur.iter().collect();
-    //tri
-    frequence.sort_by(|a, b| b.1.cmp(a.1));
+    let mut frequence: Vec<_> = compteur.into_iter().collect(); //tri
+    frequence.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
 
-    let mut i = 0;
-    for (mot, count) in frequence.iter() {
-        print!("{}: {}  ", mot, count); //affichage
-        i += 1;
-        if i == args.top {
-            break;
-        }
+    for (mot, count) in frequence.into_iter().take(args.top) {
+        println!("{}: {}", mot, count);
     }
 }
