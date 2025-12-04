@@ -190,7 +190,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let public = create_public_key(G, private, P);
             println!("[DH] Using hardcoded DH parameters:");
-            println!("p = {:016X} (64-bit prime - public)", P);
+            println!("p = {:X} (64-bit prime - public)", P);
             println!("g = {:X} (generator - public)\n", G);
 
             println!("[DH] Generating our keypair...");
@@ -275,7 +275,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let public = create_public_key(G, private, P);
 
             println!("[DH] Using hardcoded DH parameters:");
-            println!("p = {:4X} (64-bit prime - public)", P);
+            println!("p = {:X} (64-bit prime - public)", P);
             println!("g = {:X} (generator - public)\n", G);
 
             println!("[DH] Generating our keypair...");

@@ -51,9 +51,7 @@ fn main() {
     let mut compteur: HashMap<String, u32> = HashMap::new();
     for mot in t.split_whitespace() {
         //decoupe le texte en mot
-        let mot = mot.trim_matches(|c: char| !c.is_alphanumeric()).to_string(); //trim enlève des trucs au debut et a 
-        // la fin "match" pour enlever un carac particulier "|c: char|" regarde chaque si chaque char individuelement
-        // n'est pas une lettre ou un chiffre
+        let mot = mot.trim_matches(|c: char| !c.is_alphanumeric()).to_string();
         if mot.is_empty() || mot.len() < args.min_length {
             continue; // ignore les chaînes vides ou trop petites
         }
