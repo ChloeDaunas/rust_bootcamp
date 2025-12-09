@@ -179,6 +179,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let listener = TcpListener::bind(("0.0.0.0", port))?; //cree un listener qui accepte les connexions
             println!("[SERVER] Listening on {}", port);
 
+            println!("[DH] Using hardcoded DH parameters:");
+            println!("p = {:X} (64-bit prime - public)", P);
+            println!("g = {:X} (generator - public)\n", G);
+
             println!("[SERVER] Waiting for client...\n");
             let (mut stream, addr) = listener.accept()?; //bloque jusqu'a ce que une connexion arrive
 
@@ -189,9 +193,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let private: u64 = rand::random();
 
             let public = create_public_key(G, private, P);
-            println!("[DH] Using hardcoded DH parameters:");
-            println!("p = {:X} (64-bit prime - public)", P);
-            println!("g = {:X} (generator - public)\n", G);
 
             println!("[DH] Generating our keypair...");
             println!("private key = {:016X} (random 64-bit)", private);
