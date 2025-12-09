@@ -51,7 +51,10 @@ fn main() {
     let mut compteur: HashMap<String, u32> = HashMap::new();
     for mot in t.split_whitespace() {
         //decoupe le texte en mot
-        let mot = mot.trim_matches(|c: char| !c.is_alphanumeric()).to_string();
+        let mot = mot.to_string();
+        if mot.chars().all(|c| c == '"' || c == '\'') && !mot.is_empty() {
+            continue;
+        }
         if mot.is_empty() || mot.len() < args.min_length {
             continue; // ignore les chaînes vides ou trop petites
         }
