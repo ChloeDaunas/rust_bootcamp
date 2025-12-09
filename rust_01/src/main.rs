@@ -51,7 +51,7 @@ fn main() {
     let mut compteur: HashMap<String, u32> = HashMap::new();
     for mot in t.split_whitespace() {
         //decoupe le texte en mot
-        let mot = mot.to_string();
+        let mot = mot.trim_matches(',').to_string();
         if mot.chars().all(|c| c == '"' || c == '\'') && !mot.is_empty() {
             continue;
         }
